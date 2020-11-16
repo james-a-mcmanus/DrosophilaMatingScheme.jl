@@ -1,4 +1,4 @@
-import Base: show, length, isequal, parse
+import Base: show, length, isequal, parse, hash, string
 
 include("Structs.jl")
 include("PathFinding.jl")
@@ -37,14 +37,34 @@ end
 
 function Base.parse(::Type{Genotype}, s::String)
 
+	s = replace(s, " " => "")
 	chromosomes = split(s, ";")
+
 	length(chromosomes) != 4 && error("There should be 3 semicolons in a genotype definition.")
 
 	Genotype(Couple(1, chromosomes[1]), Couple(2, chromosomes[2]), Couple(3, chromosomes[3]), Couple(4, chromosomes[4]))
 end
 
+"""
+Change representation to string. 
+"""
+Base.string(a::Allele) = a.name
+function Base.string(c::Chromosome)
 
-# ---------------------------------------------- Functions------------------------------------#
+	out = ""
+
+	for g in c.genes
+	
+		out = out * string(g) * ", "
+
+	end
+
+	return out[1:end-2]
+end
+Base.string(p::Couple) = string(p.c1) * "/" * string(p.c2)
+Base.string(g::Genotype) = string(g.p1) * " ; " * string(g.p2) * " ; " * string(g.p3) * " ; " * string(g.p4)
+
+
 """
 Return all combinations of a genetic cross
 """
@@ -169,6 +189,7 @@ function Base.show(io::IO, gn::Vector{Genotype})
 end
 
 
+
 """ 
 Equivalence Functions
 """
@@ -180,20 +201,13 @@ Base.isequal(p1::Couple{N}, p2::Couple{N}) where {N} = Set(p1.c1, p1.c2) == Set(
 """
 Some helper functions.
 """
-function example()
+function example1()
 
-	a1 = Allele("yellow")
-	chr1 = Chromosome(1, (a1,a1));
-	chr2 = Chromosome(2, (a1,a1));
-	chr3 = Chromosome(3, (a1,a1));
-	chr4 = Chromosome(4, (a1,a1));
+	Genotype("sn/FM7a;sp/CyO;ser/TM3-sb;")
+end
 
-	p1 = Couple(chr1, chr1)
-	p2 = Couple(chr2, chr2)
-	p3 = Couple(chr3, chr3)
-	p4 = Couple(chr4, chr4)
-
-	Genotype(p1, p2, p3, p4)
+function example2()
+	Genotype("w[+]; If/CyO ; MKRS/TM6b ;")
 end
 
 namelength(a::Allele) = length(a.name)
@@ -219,4 +233,20 @@ end
 function wildtype(::Type{Genotype})
 
 	Genotype(wildtype(Couple, 1), wildtype(Couple, 2), wildtype(Couple, 3), wildtype(Couple, 4))
+end
+
+function origin()
+
+	Parents(
+		Genotype(
+			Chromosome(1, (Allele(""))),
+			Chromosome(2, (Allele(""))),
+			Chromosome(3, (Allele(""))),
+			Chromosome(4, (Allele("")))),
+
+		Genotype(
+			Chromosome(1, (Allele(""))),
+			Chromosome(2, (Allele(""))),
+			Chromosome(3, (Allele(""))),
+			Chromosome(4, (Allele("")))))
 end

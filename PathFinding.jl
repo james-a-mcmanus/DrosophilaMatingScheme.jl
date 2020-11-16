@@ -1,20 +1,46 @@
-function path_exists(start_genotypes, target; depth=2)
-	
-	#maximum_arraysize = calc_max_permutations(start_genotypes)
+function path_exists(start_genotypes; depth=1)
 
 
-	available_genotypes = start_genotypes
+	d = Dict{Genotype,Parents}()
 
-	for layer in 1:depth
-
-		available_genotypes = vcat(available_genotypes, unique(cross(available_genotypes)))
-
+	for original in start_genotypes
+		d[original] = origin()
 	end
 
-	return available_genotypes
+
+	for _ = 1:depth
+		
+		dkeys = keys(copy(d))
+
+		for key in dkeys
+			print(".")
+			cross_to_dict!(key, d)
+		end
+
+	end
+	return d
 end
 
-# okay we can't preallocate all possible combinations. This leads to ballooning. e.g. 3 start genotypes and 3 layers = 28Gb of data.
+
+function cross_to_dict!(g1, d)
+
+	for key in keys(d)
+
+		add_children_to_dict(Parents(key, g1), cross(key, g1), d)
+	
+	end
+	return d
+end
+
+function add_children_to_dict(parents, children, d)
+
+	for child in children
+		if !haskey(d, child) 
+			d[child] = parents
+		end
+	end
+	return d
+end
 
 
 function f1(g1, g2, target)
@@ -23,9 +49,6 @@ function f1(g1, g2, target)
 	target ∈ children ? true : children
 end
 
-function calc_max_permutations(n, depth)
 
-	(n * 256)^depth	
-
-
-end
+Base.hash(g::Genotype, h::UInt) = hash(string(g), h)
+Base.hash(gs::Tuple{Genotype, Genotype}, h::UInt) = hash(string(gs[1]) * "x" * string(gs[2]),h)
