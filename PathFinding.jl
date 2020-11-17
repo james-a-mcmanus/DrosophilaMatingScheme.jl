@@ -1,7 +1,9 @@
 function path_exists(start_genotypes; depth=1)
 
 
-	d = Dict{Genotype,Parents}()
+	d = IdDict{Genotype,Parents}()
+
+	sizehint!(d, 500 * (4* depth)) # account for length of start_genotypes
 
 	for original in start_genotypes
 		d[original] = origin()
@@ -21,15 +23,11 @@ function path_exists(start_genotypes; depth=1)
 	return d
 end
 
-
 function cross_to_dict!(g1, d)
 
 	for key in keys(d)
-
-		add_children_to_dict(Parents(key, g1), cross(key, g1), d)
-	
+		cross(d, g1, key)
 	end
-	return d
 end
 
 function add_children_to_dict(parents, children, d)

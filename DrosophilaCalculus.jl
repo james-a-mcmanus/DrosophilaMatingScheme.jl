@@ -3,7 +3,6 @@ import Base: show, length, isequal, parse, hash, string
 include("Structs.jl")
 include("PathFinding.jl")
 
-
 """
 Parse strings into genetic types
 """
@@ -68,6 +67,15 @@ Base.string(g::Genotype) = string(g.p1) * " ; " * string(g.p2) * " ; " * string(
 """
 Return all combinations of a genetic cross
 """
+function cross(d::AbstractDict{Genotype,Parents}, g1::Genotype, g2::Genotype)
+
+	chr1 = cross(g1.p1, g2.p1)
+	chr2 = cross(g1.p2, g2.p2)
+	chr3 = cross(g1.p3, g2.p3)
+	chr4 = cross(g1.p4, g2.p4)	
+	permute_chromosomes(d, chr1, chr2, chr3, chr4, Parents(g1, g2))
+end
+
 function cross(g1::Genotype, g2::Genotype)::Vector{Genotype}
 
 	chr1 = cross(g1.p1, g2.p1)
@@ -107,6 +115,7 @@ function cross(genotypes::Vector{Genotype})
 	return out
 end
 
+
 """
 Takes tuples of chromosomes, combines them into all possible genotypes.
 """
@@ -127,6 +136,23 @@ function permute_chromosomes(cpl1::NTuple{4, Couple{1}}, cpl2::NTuple{4, Couple{
 	return out
 end
 
+
+function permute_chromosomes(d::AbstractDict{Genotype, Parents}, cpl1::NTuple{4, Couple{1}}, cpl2::NTuple{4, Couple{2}}, cpl3::NTuple{4, Couple{3}}, cpl4::NTuple{4, Couple{4}}, parents::Parents)
+
+	for pr1 in cpl1
+		for pr2 in cpl2
+			for pr3 in cpl3
+				for pr4 in cpl4
+					
+					g = Genotype(pr1, pr2, pr3, pr4)
+					if !haskey(d, g) 
+						d[g] = parents;
+					end
+				end
+			end
+		end
+	end
+end
 
 """
 Custom printing of genetic types.
