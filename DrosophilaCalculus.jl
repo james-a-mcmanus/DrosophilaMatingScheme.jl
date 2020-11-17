@@ -1,4 +1,4 @@
-import Base: show, length, isequal, parse, hash, string
+import Base: show, length, isequal, parse, hash, string, unique
 
 include("Structs.jl")
 include("PathFinding.jl")
@@ -44,6 +44,7 @@ function Base.parse(::Type{Genotype}, s::String)
 	Genotype(Couple(1, chromosomes[1]), Couple(2, chromosomes[2]), Couple(3, chromosomes[3]), Couple(4, chromosomes[4]))
 end
 
+
 """
 Change representation to string. 
 """
@@ -64,6 +65,7 @@ Base.string(p::Couple) = string(p.c1) * "/" * string(p.c2)
 Base.string(g::Genotype) = string(g.p1) * " ; " * string(g.p2) * " ; " * string(g.p3) * " ; " * string(g.p4)
 
 
+
 """
 Return all combinations of a genetic cross
 """
@@ -73,7 +75,7 @@ function cross(d::AbstractDict{Genotype,Parents}, g1::Genotype, g2::Genotype)
 	chr2 = cross(g1.p2, g2.p2)
 	chr3 = cross(g1.p3, g2.p3)
 	chr4 = cross(g1.p4, g2.p4)	
-	permute_chromosomes(d, chr1, chr2, chr3, chr4, Parents(g1, g2))
+	@timeit to "permute_chromosomes" permute_chromosomes(d, chr1, chr2, chr3, chr4, Parents(g1, g2))
 end
 
 function cross(g1::Genotype, g2::Genotype)::Vector{Genotype}
@@ -88,7 +90,15 @@ end
 
 function cross(p1::Couple{N}, p2::Couple{N}) where {N}
 
-	return (Couple(p1.c1, p2.c1), Couple(p1.c1, p2.c2), Couple(p1.c2, p2.c1), Couple(p1.c2, p2.c2))
+	if homozygous(p1) && homozygous(p2)
+		return [Couple(p1.c1, p2.c1)]
+	elseif homozygous(p1)
+		return [Couple(p1.c1, p2.c1), Couple(p1.c1, p2.c2)]
+	elseif homozygous(p2)
+		return [Couple(p1.c1, p2.c1), Couple(p1.c2, p2.c1)]
+	else
+		return [Couple(p1.c1, p2.c1), Couple(p1.c1, p2.c2), Couple(p1.c2, p2.c1), Couple(p1.c2, p2.c2)]
+	end
 end
 
 cross(s1::AbstractString, s2::AbstractString) = cross(Genotype(s1), Genotype(s2))
@@ -115,44 +125,25 @@ function cross(genotypes::Vector{Genotype})
 	return out
 end
 
-
 """
 Takes tuples of chromosomes, combines them into all possible genotypes.
 """
-# This isnt' very efficient. If we insist on there being 4 posible pairs, then we can't optimise by e.g. reducing the pairs when they are homozygous etc. But it is type-stable.
-function permute_chromosomes(cpl1::NTuple{4, Couple{1}}, cpl2::NTuple{4, Couple{2}}, cpl3::NTuple{4, Couple{3}}, cpl4::NTuple{4, Couple{4}})
-	out = Vector{Genotype}(undef, 256)
-	i = 1
-	for pr1 in cpl1
-		for pr2 in cpl2
-			for pr3 in cpl3
-				for pr4 in cpl4
-					out[i] = Genotype(pr1, pr2, pr3, pr4)
-					i += 1
-				end
-			end
-		end
-	end
-	return out
-end
-
-
-function permute_chromosomes(d::AbstractDict{Genotype, Parents}, cpl1::NTuple{4, Couple{1}}, cpl2::NTuple{4, Couple{2}}, cpl3::NTuple{4, Couple{3}}, cpl4::NTuple{4, Couple{4}}, parents::Parents)
+function permute_chromosomes(d::AbstractDict{Genotype, Parents}, cpl1, cpl2, cpl3, cpl4, parents::Parents)
 
 	for pr1 in cpl1
 		for pr2 in cpl2
 			for pr3 in cpl3
 				for pr4 in cpl4
-					
-					g = Genotype(pr1, pr2, pr3, pr4)
+					@timeit to "make_genotype" g = Genotype(pr1, pr2, pr3, pr4)
 					if !haskey(d, g) 
-						d[g] = parents;
+						@timeit to "assign_to_dict" d[g] = parents;
 					end
 				end
 			end
 		end
 	end
 end
+
 
 """
 Custom printing of genetic types.
@@ -223,7 +214,6 @@ Base.isequal(a1::Allele, a2::Allele) = a1.name == a2.name
 Base.isequal(chr1::Chromosome{N}, chr2::Chromosome{N}) where {N} = Set(chr1.genes) == Set(chr2.genes)
 Base.isequal(p1::Couple{N}, p2::Couple{N}) where {N} = Set(p1.c1, p1.c2) == Set(p2.c1, p2.c2)
 
-
 """
 Some helper functions.
 """
@@ -276,3 +266,5 @@ function origin()
 			Chromosome(3, (Allele(""))),
 			Chromosome(4, (Allele("")))))
 end
+
+homozygous(p1::Couple) = p1.c1 == p1.c2
