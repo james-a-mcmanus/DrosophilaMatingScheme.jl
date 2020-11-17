@@ -220,3 +220,12 @@ function wildtype(::Type{Genotype})
 
 	Genotype(wildtype(Couple, 1), wildtype(Couple, 2), wildtype(Couple, 3), wildtype(Couple, 4))
 end
+
+function example1()
+
+	Genotype("sn/FM7a;sp/CyO;ser/TM3-sb;")
+end
+
+function example2()
+	Genotype("w[+]; If/CyO ; MKRS/TM6b ;")
+end

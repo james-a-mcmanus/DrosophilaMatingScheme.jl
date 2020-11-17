@@ -2,9 +2,10 @@ function path_exists(start_genotypes, target; depth=2)
 	
 	#maximum_arraysize = calc_max_permutations(start_genotypes)
 
-
-	available_genotypes = start_genotypes
-
+	for g in available_genotypes
+		Family(g, origin())
+	end
+	
 	for layer in 1:depth
 
 		available_genotypes = vcat(available_genotypes, unique(cross(available_genotypes)))
@@ -26,6 +27,5 @@ end
 function calc_max_permutations(n, depth)
 
 	(n * 256)^depth	
-
 
 end

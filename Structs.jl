@@ -1,4 +1,3 @@
-
 struct Allele
 	name::String	
 end
@@ -22,6 +21,17 @@ struct Genotype
 	p3::Couple{3}
 	p4::Couple{4}
 end
+
+struct Parents
+	mum::Genotype
+	dad::Genotype
+end
+
+struct Family
+	child::Genotype
+	parents::Parents
+end
+
 
 CValue(x) = CValue{x}()
 
