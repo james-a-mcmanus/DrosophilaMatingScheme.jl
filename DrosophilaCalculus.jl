@@ -229,3 +229,19 @@ end
 function example2()
 	Genotype("w[+]; If/CyO ; MKRS/TM6b ;")
 end
+
+function origin()
+
+	Parents(
+		Genotype(
+			Chromosome(1, (Allele(""))),
+			Chromosome(2, (Allele(""))),
+			Chromosome(3, (Allele(""))),
+			Chromosome(4, (Allele("")))),
+
+		Genotype(
+			Chromosome(1, (Allele(""))),
+			Chromosome(2, (Allele(""))),
+			Chromosome(3, (Allele(""))),
+			Chromosome(4, (Allele("")))))
+end
