@@ -1,5 +1,12 @@
+const lethal = true
+const not_lethal = false
+const recessive = false
+const dominant = true
+
 struct Allele
 	name::String	
+	lethality::Bool
+	dominance::Bool
 end
 
 struct CValue{N}
@@ -26,6 +33,9 @@ struct Parents
 	mum::Genotype
 	dad::Genotype
 end
+
+Allele(s::AbstractString) = Allele(s, not_lethal, isuppercase(s[1]))
+Allele(s::AbstractString, l::Bool) = Allele(s, l, isuppercase(s[1]))
 
 CValue(x) = CValue{x}()
 

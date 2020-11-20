@@ -13,7 +13,8 @@ function Base.parse(::Type{Chromosome}, n, s::AbstractString)
 	allele_names = (lstrip.(split(s, ",")))
 	alleles = Vector{Allele}(undef, length(allele_names))
 	for (i, al) in enumerate(allele_names)
-		alleles[i] = Allele(al) 
+		lethality = al[end] == '!' 
+		alleles[i] = Allele(al[1:end-lethality], lethality)
 	end
 
 	Chromosome(n, alleles) # splatting is slow, avoid parsing if performance critical
@@ -63,7 +64,6 @@ function Base.string(c::Chromosome)
 end
 Base.string(p::Couple) = string(p.c1) * "/" * string(p.c2)
 Base.string(g::Genotype) = string(g.p1) * " ; " * string(g.p2) * " ; " * string(g.p3) * " ; " * string(g.p4)
-
 
 
 """
@@ -135,7 +135,8 @@ function permute_chromosomes(d::AbstractDict{Genotype, Parents}, cpl1, cpl2, cpl
 			for pr3 in cpl3
 				for pr4 in cpl4
 					@timeit to "make_genotype" g = Genotype(pr1, pr2, pr3, pr4)
-					if !haskey(d, g) 
+					if !haskey(d, g)  && !islethal(g)
+						@infiltrate
 						@timeit to "assign_to_dict" d[g] = parents;
 					end
 				end
@@ -196,7 +197,7 @@ function Base.show(io::IO, gn::Genotype)
 
 end
 
-# Don't know why this has to be overloaded, otherwise it prints it 3 times???
+# Don't know why this has to be overloaded, otherwise it prints it 3 times??? probably it has a show method for the array and then hte element etc.?
 Base.show(io::IO, ::MIME"text/plain", gn::Vector{Genotype}) = show(io, gn)
 function Base.show(io::IO, gn::Vector{Genotype})
 
@@ -204,7 +205,6 @@ function Base.show(io::IO, gn::Vector{Genotype})
 		show(gt)
 	end
 end
-
 
 
 """ 
@@ -215,15 +215,34 @@ Base.isequal(chr1::Chromosome{N}, chr2::Chromosome{N}) where {N} = Set(chr1.gene
 Base.isequal(p1::Couple{N}, p2::Couple{N}) where {N} = Set(p1.c1, p1.c2) == Set(p2.c1, p2.c2)
 
 """
+Lethal()
+Find out if a genotype is lethal.
+"""
+islethal(g::Genotype) = islethal(g.p1) || islethal(g.p2) || islethal(g.p3) || islethal(g.p4)
+
+islethal(p::Couple) = any(islethal.(same_genes(p)))
+
+
+"""
+same_genes()
+Returns which alleles are the same between two chromosomes.
+"""
+same_genes(p::Couple) = p.c1.genes[findall(in(p.c1.genes),p.c2.genes)]
+
+
+"""
 Some helper functions.
 """
 function example1()
-
-	Genotype("sn/FM7a;sp/CyO;ser/TM3-sb;")
+	Genotype("sn/FM7a!;sp/CyO!;ser/TM3-sb!;")
 end
 
 function example2()
-	Genotype("w[+]; If/CyO ; MKRS/TM6b ;")
+	Genotype("w[+]; If/CyO! ; MKRS!/TM6b! ;")
+end
+
+function example3()
+	Genotype("w[+]; If/CyO! ; mCD8_GFP /TM6b! ;")
 end
 
 namelength(a::Allele) = length(a.name)
@@ -255,16 +274,18 @@ function origin()
 
 	Parents(
 		Genotype(
-			Chromosome(1, (Allele(""))),
-			Chromosome(2, (Allele(""))),
-			Chromosome(3, (Allele(""))),
-			Chromosome(4, (Allele("")))),
+			Chromosome(1, (Allele("", not_lethal, recessive))),
+			Chromosome(2, (Allele("", not_lethal, recessive))),
+			Chromosome(3, (Allele("", not_lethal, recessive))),
+			Chromosome(4, (Allele("", not_lethal, recessive)))),
+
 
 		Genotype(
-			Chromosome(1, (Allele(""))),
-			Chromosome(2, (Allele(""))),
-			Chromosome(3, (Allele(""))),
-			Chromosome(4, (Allele("")))))
+			Chromosome(1, (Allele("", not_lethal, recessive))),
+			Chromosome(2, (Allele("", not_lethal, recessive))),
+			Chromosome(3, (Allele("", not_lethal, recessive))),
+			Chromosome(4, (Allele("", not_lethal, recessive)))))
+
 end
 
 homozygous(p1::Couple) = p1.c1 == p1.c2
