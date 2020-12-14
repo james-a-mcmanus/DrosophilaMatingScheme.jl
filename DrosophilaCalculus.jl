@@ -134,9 +134,9 @@ function permute_chromosomes(d::AbstractDict{Genotype, Parents}, cpl1, cpl2, cpl
 		for pr2 in cpl2
 			for pr3 in cpl3
 				for pr4 in cpl4
-					g = Genotype(pr1, pr2, pr3, pr4)
+					@timeit to "make genotype" g = Genotype(pr1, pr2, pr3, pr4)
 					if !haskey(d, g)  && !islethal(g)
-						d[g] = parents;
+						@timeit to "place in dict" d[g] = parents;
 					end
 				end
 			end
@@ -210,13 +210,13 @@ end
 Equivalence Functions
 """
 Base.isequal(a1::Allele, a2::Allele) = a1.name == a2.name
-Base.isequal(chr1::Chromosome{N}, chr2::Chromosome{N}) where {N} = Set(chr1.genes) == Set(chr2.genes)
-Base.isequal(p1::Couple{N}, p2::Couple{N}) where {N} = Set([p1.c1, p1.c2]) == Set([p2.c1, p2.c2])
-function Base.isequal(g1::Genotype, g2::Genotype) 
+Base.isequal(chr1::Chromosome{N}, chr2::Chromosome{N}) where {N} = issetequal(chr1.genes, chr2.genes)
+Base.isequal(p1::Couple{N}, p2::Couple{N}) where {N} = (p1.c1 == p2.c2 && p1.c2 == p2.c1) || (p1.c1 == p2.c1 && p1.c2 == p2.c2)
+Base.isequal(g1::Genotype, g2::Genotype) = isequal(g1.p1, g2.p1) && isequal(g1.p2, g2.p2) && isequal(g1.p3, g2.p3) && isequal(g1.p4, g2.p4)
 
-	isequal(g1.p1, g2.p1) && isequal(g1.p2, g2.p2) && isequal(g1.p3, g2.p3) && isequal(g1.p4, g2.p4)
-end
-
+(==)(a1::Allele, a2::Allele) = isequal(a1,a2)
+(==)(chr1::Chromosome{N}, chr2::Chromosome{N}) where {N} = isequal(chr1, chr2)
+(==)(p1::Couple{N}, p2::Couple{N}) where {N} = isequal(p1,p2)
 (==)(g1::Genotype, g2::Genotype) = isequal(g1,g2)
 
 """
@@ -299,8 +299,8 @@ function is_origin(g::Genotype)
 	isempty(g.p1.c1.genes[1].name)
 end
 
-chromosomes(p::Couple) = [p.c1, p.c2]
-chromosomes(g::Genotype) = [chromosomes(g.p1), chromosomes(g.p2), chromosomes(g.p3), chromosomes(g.p4)]
+chromosomes(p::Couple) = Set([p.c1, p.c2])
+chromosomes(g::Genotype) = Set([g.p1.c1, g.p1.c2, g.p2.c1, g.p2.c2, g.p3.c1, g.p3.c2, g.p4.c1, g.p4.c2])
 
 
 homozygous(p1::Couple) = p1.c1 == p1.c2

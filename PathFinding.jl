@@ -84,9 +84,7 @@ function target_to_origin(crossing_tree, target, depth)
 
 		# add it to the final crossing dict.
 	end
-
 end
-
 
 function find_origin(dict, target)
 
@@ -103,7 +101,6 @@ function find_origin(dict, target)
 end
 
 
-
-
 Base.hash(g::Genotype, h::UInt) = hash(string(g), h)
+Base.hash(ch::Chromosome, h::UInt) = hash(ch.genes)
 Base.hash(gs::Tuple{Genotype, Genotype}, h::UInt) = hash(string(gs[1]) * "x" * string(gs[2]),h)
