@@ -1,22 +1,51 @@
-function path_exists(start_genotypes; depth=1)
+function all_combinations(start_genotypes; depth=1)
 
 
 	d = IdDict{Genotype,Parents}()
 
 	sizehint!(d, 500 * (4* depth)) # account for length of start_genotypes
 
+	# add start genotypes to dict.
 	for original in start_genotypes
 		d[original] = origin()
 	end
 
-
 	for _ = 1:depth
 		
-		dkeys = keys(copy(d))
+		dkeys = keys(copy(d)) # get available genotypes to cross.
 
 		for key in dkeys
 			print(".")
 			cross_to_dict!(key, d)
+		end
+
+	end
+	return d
+end
+
+function find_path(start_genotypes, target; depth=1)
+
+	d = IdDict{Genotype,Parents}()
+
+	sizehint!(d, 500 * (4* depth)) # account for length of start_genotypes
+
+	# add start genotypes to dict.
+	for original in start_genotypes
+		d[original] = origin()
+	end
+
+	for current_depth = 1:depth
+		
+		dkeys = keys(copy(d)) # get available genotypes to cross.
+
+		for key in dkeys
+			print(".")
+			cross_to_dict!(key, d)
+			@infiltrate
+			if target in keys(d)
+				print("Found the Genotype!")
+				return d#target_to_origin(d, target, current_depth)
+			end
 		end
 
 	end
@@ -40,12 +69,40 @@ function add_children_to_dict(parents, children, d)
 	return d
 end
 
+function target_to_origin(crossing_tree, target, depth)
 
-function f1(g1, g2, target)
+	parents_found = false
 
-	children = cross(g1, g2)
-	target ∈ children ? true : children
+
+
+	while !parents_found
+
+		# find the parents
+		parents = crossing_tree[target]
+
+		# then find the parents' parents.
+
+		# add it to the final crossing dict.
+	end
+
 end
+
+
+function find_origin(dict, target)
+
+	if !is_origin(dict[target].mum)
+		print(dict[target].mum)
+		find_origin(dict, dict[target].mum)	
+	end
+	if !is_origin(dict[target].dad)
+		print(dict[target].dad)
+		find_origin(dict, dict[target].dad)
+	end
+
+	return 
+end
+
+
 
 
 Base.hash(g::Genotype, h::UInt) = hash(string(g), h)

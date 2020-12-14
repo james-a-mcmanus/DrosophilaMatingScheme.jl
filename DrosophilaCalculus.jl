@@ -1,4 +1,4 @@
-import Base: show, length, isequal, parse, hash, string, unique
+import Base: show, length, isequal, parse, hash, string, unique, ==
 
 include("Structs.jl")
 include("PathFinding.jl")
@@ -75,7 +75,7 @@ function cross(d::AbstractDict{Genotype,Parents}, g1::Genotype, g2::Genotype)
 	chr2 = cross(g1.p2, g2.p2)
 	chr3 = cross(g1.p3, g2.p3)
 	chr4 = cross(g1.p4, g2.p4)	
-	@timeit to "permute_chromosomes" permute_chromosomes(d, chr1, chr2, chr3, chr4, Parents(g1, g2))
+	permute_chromosomes(d, chr1, chr2, chr3, chr4, Parents(g1, g2))
 end
 
 function cross(g1::Genotype, g2::Genotype)::Vector{Genotype}
@@ -134,10 +134,9 @@ function permute_chromosomes(d::AbstractDict{Genotype, Parents}, cpl1, cpl2, cpl
 		for pr2 in cpl2
 			for pr3 in cpl3
 				for pr4 in cpl4
-					@timeit to "make_genotype" g = Genotype(pr1, pr2, pr3, pr4)
+					g = Genotype(pr1, pr2, pr3, pr4)
 					if !haskey(d, g)  && !islethal(g)
-						@infiltrate
-						@timeit to "assign_to_dict" d[g] = parents;
+						d[g] = parents;
 					end
 				end
 			end
@@ -154,11 +153,10 @@ Base.show(io::IO, ::MIME"text/plain", al::Allele) = print(al.name)
 
 Base.show(io::IO, ::MIME"text/plain", ch::Chromosome) = show(io, ch)
 function Base.show(io::IO, ch::Chromosome)
-	for i = 1:length(ch.genes)-1
-		show(ch.genes[i])
+	for i in ch.genes
+		show(i)
 		print(", ")
 	end
-	show(ch.genes[length(ch.genes)])
 end
 
 Base.show(io::IO, ::MIME"text/plain", cpl::Couple) = show(io, cpl)
@@ -182,6 +180,7 @@ function Base.show(io::IO, gn::Genotype)
 	print_of_pair(gn.p3, gn.p3.c1, spacing)
 	print_of_pair(gn.p4, gn.p4.c1, spacing, semi=false)
 
+	# Print the dividing line
 	print("\n")
 	print(Char(8212)^namelength(gn.p1), " "^(2*spacing + 1))
 	print(Char(8212)^namelength(gn.p2), " "^(2*spacing + 1))
@@ -198,7 +197,7 @@ function Base.show(io::IO, gn::Genotype)
 end
 
 # Don't know why this has to be overloaded, otherwise it prints it 3 times??? probably it has a show method for the array and then hte element etc.?
-Base.show(io::IO, ::MIME"text/plain", gn::Vector{Genotype}) = show(io, gn)
+#Base.show(io::IO, ::MIME"text/plain", gn::Vector{Genotype}) = show(io, gn)
 function Base.show(io::IO, gn::Vector{Genotype})
 
 	for gt in gn
@@ -212,7 +211,13 @@ Equivalence Functions
 """
 Base.isequal(a1::Allele, a2::Allele) = a1.name == a2.name
 Base.isequal(chr1::Chromosome{N}, chr2::Chromosome{N}) where {N} = Set(chr1.genes) == Set(chr2.genes)
-Base.isequal(p1::Couple{N}, p2::Couple{N}) where {N} = Set(p1.c1, p1.c2) == Set(p2.c1, p2.c2)
+Base.isequal(p1::Couple{N}, p2::Couple{N}) where {N} = Set([p1.c1, p1.c2]) == Set([p2.c1, p2.c2])
+function Base.isequal(g1::Genotype, g2::Genotype) 
+
+	isequal(g1.p1, g2.p1) && isequal(g1.p2, g2.p2) && isequal(g1.p3, g2.p3) && isequal(g1.p4, g2.p4)
+end
+
+(==)(g1::Genotype, g2::Genotype) = isequal(g1,g2)
 
 """
 Lethal()
@@ -222,12 +227,14 @@ islethal(g::Genotype) = islethal(g.p1) || islethal(g.p2) || islethal(g.p3) || is
 
 islethal(p::Couple) = any(islethal.(same_genes(p)))
 
+islethal(a::Allele) = a.lethality
 
 """
 same_genes()
 Returns which alleles are the same between two chromosomes.
 """
-same_genes(p::Couple) = p.c1.genes[findall(in(p.c1.genes),p.c2.genes)]
+same_genes(p::Couple) = intersect(p.c1.genes, p.c2. genes)
+#p.c1.genes[findall(in(p.c1.genes),p.c2.genes)]
 
 
 """
@@ -246,8 +253,8 @@ function example3()
 end
 
 namelength(a::Allele) = length(a.name)
-namelength(ch::Chromosome) = sum([namelength(g) + 2 for g in ch.genes]) - 2
-namelength(pr::Couple) = max(namelength(pr.c1), namelength(pr.c2))
+namelength(ch::Chromosome) = sum([namelength(g) + 2 for g in ch.genes])
+namelength(pr::Couple) = max(namelength(pr.c1), namelength(pr.c2)) -1
 namelength(gn::Genotype) = namelength(gn.p1) + namelength(gn.p2) + namelength(gn.p3) + namelength(gn.p4)
 
 function print_of_pair(couple, chrom, spacing; semi=true) 
@@ -285,7 +292,15 @@ function origin()
 			Chromosome(2, (Allele("", not_lethal, recessive))),
 			Chromosome(3, (Allele("", not_lethal, recessive))),
 			Chromosome(4, (Allele("", not_lethal, recessive)))))
-
 end
+
+
+function is_origin(g::Genotype)
+	isempty(g.p1.c1.genes[1].name)
+end
+
+chromosomes(p::Couple) = [p.c1, p.c2]
+chromosomes(g::Genotype) = [chromosomes(g.p1), chromosomes(g.p2), chromosomes(g.p3), chromosomes(g.p4)]
+
 
 homozygous(p1::Couple) = p1.c1 == p1.c2

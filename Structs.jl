@@ -12,9 +12,9 @@ end
 struct CValue{N}
 end
 
-struct Chromosome{N,i}
+struct Chromosome{N}
 	chromosome::CValue{N}	
-	genes::NTuple{i, Allele}
+	genes::Set{Allele}
 end
 
 struct Couple{N}
@@ -34,14 +34,20 @@ struct Parents
 	dad::Genotype
 end
 
+struct Family
+	parents::Parents
+	child::Genotype
+end
+
 Allele(s::AbstractString) = Allele(s, not_lethal, isuppercase(s[1]))
 Allele(s::AbstractString, l::Bool) = Allele(s, l, isuppercase(s[1]))
 
 CValue(x) = CValue{x}()
 
-Chromosome(chromosome_number::Int, alleles::NTuple{i, Allele}) where {i} = Chromosome(CValue(chromosome_number), alleles)
-Chromosome(chromosome_number::Int, alleles::Vector{Allele}) = Chromosome(CValue(chromosome_number), tuple(alleles...))
-Chromosome(chromosome_number::Int, alleles::Allele) where {i} = Chromosome(CValue(chromosome_number), (alleles,))
+Chromosome(chromosome_number::Int, alleles::Set{Allele}) = Chromosome(CValue(chromosome_number), alleles)
+Chromosome(chromosome_number::Int, alleles::Vector{Allele}) = Chromosome(CValue(chromosome_number), Set(alleles))
+Chromosome(chromosome_number::Int, alleles::NTuple{N, Allele}) where {N} = Chromosome(CValue(chromosome_number), Set(alleles))
+Chromosome(chromosome_number::Int, alleles::Allele) = Chromosome(CValue(chromosome_number), Set([alleles]))
 Chromosome(chromosome_number::Int, s::AbstractString) = parse(Chromosome, chromosome_number, s)
 
 Couple(c1::Chromosome{N}) where {N} = Couple(c1, c1);
