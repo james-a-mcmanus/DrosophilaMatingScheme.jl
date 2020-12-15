@@ -19,7 +19,6 @@ function Base.parse(::Type{Chromosome}, n, s::AbstractString)
 
 	Chromosome(n, alleles) # splatting is slow, avoid parsing if performance critical
 end
-
 function Base.parse(::Type{Couple}, n, s::AbstractString)
 
 	isempty(s) && return wildtype(Couple, n)
@@ -34,7 +33,6 @@ function Base.parse(::Type{Couple}, n, s::AbstractString)
 		error("More than 1 divisor in a chromosome?")
 	end
 end
-
 function Base.parse(::Type{Genotype}, s::String)
 
 	s = replace(s, " " => "")
@@ -77,7 +75,6 @@ function cross(d::AbstractDict{Genotype,Parents}, g1::Genotype, g2::Genotype)
 	chr4 = cross(g1.p4, g2.p4)	
 	permute_chromosomes(d, chr1, chr2, chr3, chr4, Parents(g1, g2))
 end
-
 function cross(g1::Genotype, g2::Genotype)::Vector{Genotype}
 
 	chr1 = cross(g1.p1, g2.p1)
@@ -87,7 +84,6 @@ function cross(g1::Genotype, g2::Genotype)::Vector{Genotype}
 
 	return unique(permute_chromosomes(chr1, chr2, chr3, chr4))
 end
-
 function cross(p1::Couple{N}, p2::Couple{N}) where {N}
 
 	if homozygous(p1) && homozygous(p2)
@@ -100,9 +96,7 @@ function cross(p1::Couple{N}, p2::Couple{N}) where {N}
 		return [Couple(p1.c1, p2.c1), Couple(p1.c1, p2.c2), Couple(p1.c2, p2.c1), Couple(p1.c2, p2.c2)]
 	end
 end
-
 cross(s1::AbstractString, s2::AbstractString) = cross(Genotype(s1), Genotype(s2))
-
 function cross(g1::Genotype, genotypes::Vector{Genotype})
 
 	out = Genotype[]
@@ -112,9 +106,7 @@ function cross(g1::Genotype, genotypes::Vector{Genotype})
 	end
 	return out
 end
-
 cross(genotypes::Vector{Genotype}, g1::Genotype) = cross(g1, genotypes)
-
 function cross(genotypes::Vector{Genotype})
 
 	out = Genotype[]
@@ -125,6 +117,7 @@ function cross(genotypes::Vector{Genotype})
 	return out
 end
 
+
 """
 Takes tuples of chromosomes, combines them into all possible genotypes.
 """
@@ -134,9 +127,9 @@ function permute_chromosomes(d::AbstractDict{Genotype, Parents}, cpl1, cpl2, cpl
 		for pr2 in cpl2
 			for pr3 in cpl3
 				for pr4 in cpl4
-					@timeit to "make genotype" g = Genotype(pr1, pr2, pr3, pr4)
+					g = Genotype(pr1, pr2, pr3, pr4)
 					if !haskey(d, g)  && !islethal(g)
-						@timeit to "place in dict" d[g] = parents;
+						d[g] = parents;
 					end
 				end
 			end
@@ -150,7 +143,6 @@ Custom printing of genetic types.
 """
 Base.show(io::IO, al::Allele) = print(al.name)
 Base.show(io::IO, ::MIME"text/plain", al::Allele) = print(al.name)
-
 Base.show(io::IO, ::MIME"text/plain", ch::Chromosome) = show(io, ch)
 function Base.show(io::IO, ch::Chromosome)
 	for i in ch.genes
@@ -158,7 +150,6 @@ function Base.show(io::IO, ch::Chromosome)
 		print(", ")
 	end
 end
-
 Base.show(io::IO, ::MIME"text/plain", cpl::Couple) = show(io, cpl)
 function Base.show(io::IO, cpl::Couple)
 
@@ -167,7 +158,6 @@ function Base.show(io::IO, cpl::Couple)
 	println(Char(8212)^max(namelength(cpl.c1),namelength(cpl.c2)))
 	show(cpl.c2)
 end
-
 Base.show(io::IO, ::MIME"text/plain", gn::Genotype) = show(io, gn)
 function Base.show(io::IO, gn::Genotype)
 
@@ -193,11 +183,8 @@ function Base.show(io::IO, gn::Genotype)
 	print_of_pair(gn.p3, gn.p3.c2, spacing)
 	print_of_pair(gn.p4, gn.p4.c2, spacing, semi=false)
 	print("\n\n")
-
 end
-
-# Don't know why this has to be overloaded, otherwise it prints it 3 times??? probably it has a show method for the array and then hte element etc.?
-#Base.show(io::IO, ::MIME"text/plain", gn::Vector{Genotype}) = show(io, gn)
+Base.show(io::IO, ::MIME"text/plain", gn::Vector{Genotype}) = show(io, gn)
 function Base.show(io::IO, gn::Vector{Genotype})
 
 	for gt in gn
@@ -214,20 +201,32 @@ Base.isequal(chr1::Chromosome{N}, chr2::Chromosome{N}) where {N} = issetequal(ch
 Base.isequal(p1::Couple{N}, p2::Couple{N}) where {N} = (p1.c1 == p2.c2 && p1.c2 == p2.c1) || (p1.c1 == p2.c1 && p1.c2 == p2.c2)
 Base.isequal(g1::Genotype, g2::Genotype) = isequal(g1.p1, g2.p1) && isequal(g1.p2, g2.p2) && isequal(g1.p3, g2.p3) && isequal(g1.p4, g2.p4)
 
+
 (==)(a1::Allele, a2::Allele) = isequal(a1,a2)
 (==)(chr1::Chromosome{N}, chr2::Chromosome{N}) where {N} = isequal(chr1, chr2)
 (==)(p1::Couple{N}, p2::Couple{N}) where {N} = isequal(p1,p2)
 (==)(g1::Genotype, g2::Genotype) = isequal(g1,g2)
+
 
 """
 Lethal()
 Find out if a genotype is lethal.
 """
 islethal(g::Genotype) = islethal(g.p1) || islethal(g.p2) || islethal(g.p3) || islethal(g.p4)
-
-islethal(p::Couple) = any(islethal.(same_genes(p)))
-
+#islethal(p::Couple) = any(islethal.(same_genes(p)))
 islethal(a::Allele) = a.lethality
+
+@inline function islethal(p::Couple)
+
+	for ch1_gene in p.c1.genes 
+		(ch1_gene.lethality && ch1_gene in p.c2.genes) && return true
+	end
+
+	for ch2_gene in p.c2.genes
+		(ch2_gene.lethality && ch2_gene in p.c1.genes) && return true
+	end
+	return false
+end
 
 """
 same_genes()
@@ -243,20 +242,26 @@ Some helper functions.
 function example1()
 	Genotype("sn/FM7a!;sp/CyO!;ser/TM3-sb!;")
 end
-
 function example2()
 	Genotype("w[+]; If/CyO! ; MKRS!/TM6b! ;")
 end
-
 function example3()
 	Genotype("w[+]; If/CyO! ; mCD8_GFP /TM6b! ;")
 end
 
+
+"""
+How long a component will be when printed
+"""
 namelength(a::Allele) = length(a.name)
 namelength(ch::Chromosome) = sum([namelength(g) + 2 for g in ch.genes])
 namelength(pr::Couple) = max(namelength(pr.c1), namelength(pr.c2)) -1
 namelength(gn::Genotype) = namelength(gn.p1) + namelength(gn.p2) + namelength(gn.p3) + namelength(gn.p4)
 
+
+"""
+Given a couple, print out a given chromosome in that couple. 
+"""
 function print_of_pair(couple, chrom, spacing; semi=true) 
 	show(chrom)
 	print(" "^(spacing+namelength(couple) - namelength(chrom)))
@@ -264,19 +269,25 @@ function print_of_pair(couple, chrom, spacing; semi=true)
 	print(" "^spacing)
 end
 
+
+"""
+given genetic info, is it wildtype
+"""
 function wildtype(::Type{Chromosome}, n)
 	return Chromosome(n, (Allele("+"),))
 end
-
 function wildtype(::Type{Couple}, n)
 	return Couple(Chromosome(n, (Allele("+"),)))
 end
-
 function wildtype(::Type{Genotype})
 
 	Genotype(wildtype(Couple, 1), wildtype(Couple, 2), wildtype(Couple, 3), wildtype(Couple, 4))
 end
 
+
+"""
+Empty Genotype 
+"""
 function origin()
 
 	Parents(
@@ -295,12 +306,22 @@ function origin()
 end
 
 
+"""
+Chceks if genotype is origin
+"""
 function is_origin(g::Genotype)
 	isempty(g.p1.c1.genes[1].name)
 end
 
+
+"""
+return set of chromosomes in genetic type
+"""
 chromosomes(p::Couple) = Set([p.c1, p.c2])
 chromosomes(g::Genotype) = Set([g.p1.c1, g.p1.c2, g.p2.c1, g.p2.c2, g.p3.c1, g.p3.c2, g.p4.c1, g.p4.c2])
 
 
+"""
+is pair of chromosomes homozygous.
+"""
 homozygous(p1::Couple) = p1.c1 == p1.c2
