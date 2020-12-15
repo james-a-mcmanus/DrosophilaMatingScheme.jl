@@ -2,11 +2,11 @@ function path_exists(start_genotypes; depth=2)
 	
 	#maximum_arraysize = calc_max_permutations(start_genotypes)
 
-	out_array = Vector{Family}(undef, 500 * (length(start_genotypes)*depth))
+	out_array = Vector{Genotype}(undef, 500 * (length(start_genotypes)*depth))
 	i = 1
 
 	for g in start_genotypes
-		out_array[i] = Family(g, origin())
+		out_array[i] = g
 		i+=1
 	end
 	
