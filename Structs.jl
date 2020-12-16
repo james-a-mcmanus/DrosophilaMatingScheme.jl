@@ -1,5 +1,5 @@
 struct Allele
-	name::String	
+	name::String
 end
 
 struct CValue{N}

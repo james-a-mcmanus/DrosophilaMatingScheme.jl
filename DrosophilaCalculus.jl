@@ -19,7 +19,6 @@ function Base.parse(::Type{Chromosome}, n, s::AbstractString)
 
 	Chromosome(n, alleles) # splatting is slow, avoid parsing if performance critical
 end
-
 function Base.parse(::Type{Couple}, n, s::AbstractString)
 
 	isempty(s) && return wildtype(Couple, n)
@@ -34,7 +33,6 @@ function Base.parse(::Type{Couple}, n, s::AbstractString)
 		error("More than 1 divisor in a chromosome?")
 	end
 end
-
 function Base.parse(::Type{Genotype}, s::String)
 
 	chromosomes = split(s, ";")
@@ -57,14 +55,11 @@ function cross(g1::Genotype, g2::Genotype)::Vector{Genotype}
 
 	return unique(permute_chromosomes(chr1, chr2, chr3, chr4))
 end
-
 function cross(p1::Couple{N}, p2::Couple{N}) where {N}
 
 	return (Couple(p1.c1, p2.c1), Couple(p1.c1, p2.c2), Couple(p1.c2, p2.c1), Couple(p1.c2, p2.c2))
 end
-
 cross(s1::AbstractString, s2::AbstractString) = cross(Genotype(s1), Genotype(s2))
-
 function cross(g1::Genotype, genotypes::Vector{Genotype})
 
 	out = Genotype[]
@@ -74,9 +69,7 @@ function cross(g1::Genotype, genotypes::Vector{Genotype})
 	end
 	return out
 end
-
 cross(genotypes::Vector{Genotype}, g1::Genotype) = cross(g1, genotypes)
-
 function cross(genotypes::Vector{Genotype})
 
 	out = Genotype[]
@@ -87,10 +80,10 @@ function cross(genotypes::Vector{Genotype})
 	return out
 end
 
+
 """
 Takes tuples of chromosomes, combines them into all possible genotypes.
 """
-# This isnt' very efficient. If we insist on there being 4 posible pairs, then we can't optimise by e.g. reducing the pairs when they are homozygous etc. But it is type-stable.
 function permute_chromosomes(cpl1::NTuple{4, Couple{1}}, cpl2::NTuple{4, Couple{2}}, cpl3::NTuple{4, Couple{3}}, cpl4::NTuple{4, Couple{4}})
 	out = Vector{Genotype}(undef, 256)
 	i = 1
@@ -113,7 +106,6 @@ Custom printing of genetic types.
 """
 Base.show(io::IO, al::Allele) = print(al.name)
 Base.show(io::IO, ::MIME"text/plain", al::Allele) = print(al.name)
-
 Base.show(io::IO, ::MIME"text/plain", ch::Chromosome) = show(io, ch)
 function Base.show(io::IO, ch::Chromosome)
 	for i = 1:length(ch.genes)-1
@@ -122,7 +114,6 @@ function Base.show(io::IO, ch::Chromosome)
 	end
 	show(ch.genes[length(ch.genes)])
 end
-
 Base.show(io::IO, ::MIME"text/plain", cpl::Couple) = show(io, cpl)
 function Base.show(io::IO, cpl::Couple)
 
@@ -131,7 +122,6 @@ function Base.show(io::IO, cpl::Couple)
 	println(Char(8212)^max(namelength(cpl.c1),namelength(cpl.c2)))
 	show(cpl.c2)
 end
-
 Base.show(io::IO, ::MIME"text/plain", gn::Genotype) = show(io, gn)
 function Base.show(io::IO, gn::Genotype)
 
@@ -156,10 +146,7 @@ function Base.show(io::IO, gn::Genotype)
 	print_of_pair(gn.p3, gn.p3.c2, spacing)
 	print_of_pair(gn.p4, gn.p4.c2, spacing, semi=false)
 	print("\n\n")
-
 end
-
-# Don't know why this has to be overloaded, otherwise it prints it 3 times???
 Base.show(io::IO, ::MIME"text/plain", gn::Vector{Genotype}) = show(io, gn)
 function Base.show(io::IO, gn::Vector{Genotype})
 
@@ -196,10 +183,12 @@ function example()
 	Genotype(p1, p2, p3, p4)
 end
 
+
 namelength(a::Allele) = length(a.name)
 namelength(ch::Chromosome) = sum([namelength(g) + 2 for g in ch.genes]) - 2
 namelength(pr::Couple) = max(namelength(pr.c1), namelength(pr.c2))
 namelength(gn::Genotype) = namelength(gn.p1) + namelength(gn.p2) + namelength(gn.p3) + namelength(gn.p4)
+
 
 function print_of_pair(couple, chrom, spacing; semi=true) 
 	show(chrom)
@@ -208,27 +197,28 @@ function print_of_pair(couple, chrom, spacing; semi=true)
 	print(" "^spacing)
 end
 
+
 function wildtype(::Type{Chromosome}, n)
 	return Chromosome(n, (Allele("+"),))
 end
-
 function wildtype(::Type{Couple}, n)
 	return Couple(Chromosome(n, (Allele("+"),)))
 end
-
 function wildtype(::Type{Genotype})
 
 	Genotype(wildtype(Couple, 1), wildtype(Couple, 2), wildtype(Couple, 3), wildtype(Couple, 4))
 end
 
+
 function example1()
 
 	Genotype("sn/FM7a;sp/CyO;ser/TM3-sb;")
 end
-
 function example2()
+
 	Genotype("w[+]; If/CyO ; MKRS/TM6b ;")
 end
+
 
 function origin()
 
