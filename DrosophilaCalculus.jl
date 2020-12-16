@@ -1,4 +1,4 @@
-import Base: show, length, isequal, parse, hash, string, unique, ==
+import Base: show, length, isequal, parse, hash, string, unique, ==, length, unique
 
 include("Structs.jl")
 include("PathFinding.jl")
@@ -61,8 +61,9 @@ function Base.string(c::Chromosome)
 	return out[1:end-2]
 end
 Base.string(p::Couple) = string(p.c1) * "/" * string(p.c2)
-Base.string(g::Genotype) = string(g.p1) * " ; " * string(g.p2) * " ; " * string(g.p3) * " ; " * string(g.p4)
-
+function Base.string(g::Genotype)
+	is_origin(g) ? "" : string(g.p1) * " ; " * string(g.p2) * " ; " * string(g.p3) * " ; " * string(g.p4)
+end
 
 """
 Return all combinations of a genetic cross
@@ -118,6 +119,121 @@ function cross(genotypes::Vector{Genotype})
 end
 
 
+
+
+
+function cross!(genotypes::Vector{Genotype}, i)
+
+	b = copy(i)
+
+	for g1 in genotypes[1:b-1]
+	
+		new_genotypes = cross(g1, genotypes[1:i-1])
+		new_genotypes = unique(new_genotypes)
+		new_genotypes = unique_genotypes(genotypes[i:i-1], new_genotypes)
+
+		if i + length(new_genotypes) > length(genotypes)
+			@infiltrate
+			new_array = Vector{Genotype}(undef, 10 * length(genotypes))
+			new_array[1:i-1] .= genotypes[1:i-1]
+			genotypes = new_array
+		end
+
+		genotypes[i:i+length(new_genotypes)-1] .= new_genotypes
+		i += length(new_genotypes)
+	end
+	return (genotypes, i)
+end
+
+function cross!(genotypes::Vector{Family}, i)
+
+	b = copy(i)
+
+	for g1 in genotypes[1:b-1]
+	
+		new_genotypes = cross(g1, genotypes[1:i-1])
+		@infiltrate
+		new_genotypes = unique(new_genotypes)
+		@infiltrate
+		new_genotypes = unique_genotypes(genotypes[1:i-1], new_genotypes)
+
+		if i + length(new_genotypes) > length(genotypes)
+			new_array = Vector{Family}(undef, 10 * length(genotypes))
+			new_array[1:i-1] .= genotypes[1:i-1]
+			genotypes = new_array
+		end
+
+		genotypes[i:i+length(new_genotypes)-1] .= new_genotypes
+		i += length(new_genotypes)
+	end
+	return (genotypes, i)
+
+end
+
+cross(f1::Family, families::Vector{Family}) = cross(families, f1)
+function cross(families::Vector{Family}, f1::Family)
+
+	# we can massively improve this by predicting how big the output is going to be.
+	out = Family[]
+	# cross every family in "families" to "f1"
+	
+	for f2 in families
+
+		@infiltrate
+		new_genotypes = cross(f2.child, f1.child)
+		out_families = Vector{Family}(undef, length(new_genotypes))
+		for i in 1:length(new_genotypes)
+			out_families[i] = Family(new_genotypes[i], Parents(f1.child, f2.child))
+		end
+
+		out = vcat(out, out_families)
+	end
+	return out
+end
+
+
+
+function unique_genotypes(old_genotypes, new_genotypes)
+
+	uniques = Vector{eltype(old_genotypes)}(undef, length(new_genotypes))
+	i = 1
+	for g in new_genotypes
+		if !(g in old_genotypes)
+			uniques[i] = g
+			i+=1
+		end
+
+	end
+	return uniques[1:i-1]
+end
+function Base.unique(fms::Vector{Family})
+
+	out = Vector{Family}(undef, length(fms))
+	i=1
+	for fam in fms
+		if !(fam.child in children(out[1:i-1]))
+			out[i] = fam
+			i+=1
+		end
+	end
+	return out[1:i-1]
+end
+
+# only considers families unique if they have different children (parents don't matter)
+function unique_genotypes(old_genotypes::Vector{Family}, new_genotypes::Vector{Family})
+
+
+	old_children = children(old_genotypes)
+	uniques = Vector{eltype(old_genotypes)}(undef, length(new_genotypes))
+	i = 1
+	for g in new_genotypes	
+		if !(g.child in old_children)
+			uniques[i] = g
+			i+=1
+		end
+	end
+	return uniques[1:i-1]
+end
 """
 Takes tuples of chromosomes, combines them into all possible genotypes.
 """
@@ -130,15 +246,16 @@ function permute_chromosomes(cpl1, cpl2, cpl3, cpl4)
 			for pr3 in cpl3
 				for pr4 in cpl4
 					g = Genotype(pr1, pr2, pr3, pr4)
-					out[i] = g
-					i+=1
+					if !islethal(g)
+						out[i] = g
+						i+=1
+					end
 				end
 			end
 		end
 	end
 	return out[1:i-1]
 end
-
 function permute_chromosomes(d::AbstractDict{Genotype, Parents}, cpl1, cpl2, cpl3, cpl4, parents::Parents)
 
 	for pr1 in cpl1
@@ -159,25 +276,21 @@ end
 """
 Custom printing of genetic types.
 """
-Base.show(io::IO, al::Allele) = print(al.name)
-Base.show(io::IO, ::MIME"text/plain", al::Allele) = print(al.name)
-Base.show(io::IO, ::MIME"text/plain", ch::Chromosome) = show(io, ch)
-function Base.show(io::IO, ch::Chromosome)
+longprint(al::Allele) = print(al.name)
+function longprint(ch::Chromosome)
 	for i in ch.genes
 		show(i)
 		print(", ")
 	end
 end
-Base.show(io::IO, ::MIME"text/plain", cpl::Couple) = show(io, cpl)
-function Base.show(io::IO, cpl::Couple)
+function longprint(cpl::Couple)
 
 	show(cpl.c1)
 	print("\n")
 	println(Char(8212)^max(namelength(cpl.c1),namelength(cpl.c2)))
 	show(cpl.c2)
 end
-Base.show(io::IO, ::MIME"text/plain", gn::Genotype) = show(io, gn)
-function Base.show(io::IO, gn::Genotype)
+function longprint(gn::Genotype)
 
 	spacing = 3
 
@@ -202,11 +315,31 @@ function Base.show(io::IO, gn::Genotype)
 	print_of_pair(gn.p4, gn.p4.c2, spacing, semi=false)
 	print("\n\n")
 end
-Base.show(io::IO, ::MIME"text/plain", gn::Vector{Genotype}) = show(io, gn)
-function Base.show(io::IO, gn::Vector{Genotype})
 
-	for gt in gn
-		show(gt)
+
+Base.show(io::IO, ::MIME"text/plain", gn::Genotype) = show(io, gn)
+function Base.show(io::IO, gn::Genotype)
+
+	print("[" * string(gn) * "]")
+end
+Base.show(io::IO, ::MIME"text/plain", fm::Family) = show(io, fm)
+function Base.show(io::IO, fm::Family)
+
+	show(fm.parents)
+	print(" = ")
+	show(fm.child)
+end
+function Base.show(io::IO, pr::Parents)
+	show(pr.mum)
+	print(" x ")
+	show(pr.dad)
+end
+Base.show(io::IO, ::MIME"text/plain", vfm::Vector{Family}) = show(io, vfm)
+function Base.show(io::IO, vfm::Vector{Family})
+
+	for fm in vfm
+		show(fm)
+		println()
 	end
 end
 
@@ -347,7 +480,7 @@ end
 Chceks if genotype is origin
 """
 function is_origin(g::Genotype)
-	isempty(g.p1.c1.genes[1].name)
+	isempty(rand(g.p1.c1.genes).name)
 end
 
 
@@ -357,6 +490,14 @@ return set of chromosomes in genetic type
 chromosomes(p::Couple) = Set([p.c1, p.c2])
 chromosomes(g::Genotype) = Set([g.p1.c1, g.p1.c2, g.p2.c1, g.p2.c2, g.p3.c1, g.p3.c2, g.p4.c1, g.p4.c2])
 
+function children(gs::Vector{Family})
+
+	out = Vector{Genotype}(undef, length(gs))
+	for (i, g) in enumerate(gs)
+		out[i] = g.child
+	end
+	return out
+end
 
 """
 is pair of chromosomes homozygous.

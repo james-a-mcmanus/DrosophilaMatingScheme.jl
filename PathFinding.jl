@@ -1,4 +1,3 @@
-
 function path_exists(start_genotypes; depth=2)
 	
 	out_array = Vector{Genotype}(undef, 500 * (length(start_genotypes)*depth))
@@ -10,28 +9,39 @@ function path_exists(start_genotypes; depth=2)
 	end
 	
 	for layer in 1:depth
-		new_gens = unique(cross(start_genotypes));
 
-		f1_number = length(new_gens)
 
-		# if our output_array gets too big
-		if f1_number + i > length(out_array)
-			new_array = Vector{eltype(out_array)}(undef, 2 * length(out_array))
-			new_array[1:i] .= out_array[1:i]
-			out_array = new_array
-		end
-
-		out_array[i:i+length(new_gens)-1] .= new_gens
-		i = i+length(new_gens)
-
-		unique_genotypes = unique(out_array[1:i-1])
-		i = 1 + length(unique_genotypes)
-		out_array[1:i-1] .= unique_genotypes
+		(out_array, i) = cross!(out_array, i)
 	end
 
 	return out_array[1:i-1]
 end
 
+function all_combinations_array(start_genotypes; depth=2)
+
+	out_array = Vector{Family}(undef, 500 * (length(start_genotypes)*depth))
+
+	i=1
+	for g in start_genotypes
+		out_array[i] = Family(g, origin())
+		i+=1
+	end
+
+	for layer in 1:depth
+
+		(out_array, i) = cross!(out_array, i)
+	end
+	return out_array[1:i-1]
+end
+
+
+function remove_duplicates!(genotypes, i)
+
+	non_duplicates = unique(genotypes[1:i-1])
+	genotypes[1:length(non_duplicates)] .= non_duplicates
+	i = length(non_duplicates)
+	return i
+end
 
 function all_combinations(start_genotypes; depth=1)
 
@@ -86,12 +96,14 @@ function find_path(start_genotypes, target; depth=1)
 	return d
 end
 
+
 function cross_to_dict!(g1, d)
 
 	for key in keys(d)
 		cross(d, g1, key)
 	end
 end
+
 
 function add_children_to_dict(parents, children, d)
 
@@ -102,7 +114,6 @@ function add_children_to_dict(parents, children, d)
 	end
 	return d
 end
-
 
 
 function find_origin(dict, target)
@@ -127,14 +138,9 @@ function Base.hash(g::Genotype, h::UInt)
 	hv ⊻= hash(g.p3)
 	hv ⊻= hash(g.p4)
 end
-
-
-
-
 Base.hash(a::Allele) = hash(a.name)
 Base.hash(ch::Chromosome, h::UInt) = hash(ch.genes)
 Base.hash(gs::Tuple{Genotype, Genotype}, h::UInt) = hash(string(gs[1]) * "x" * string(gs[2]),h)
-
 function Base.hash(s::Set{Allele}, h::UInt) # NOTE: Make more efficient by taking in hv and modifying it.
     hv = Base.hashs_seed
     for x in s
@@ -143,8 +149,6 @@ function Base.hash(s::Set{Allele}, h::UInt) # NOTE: Make more efficient by takin
     end
     hash(hv, h)
 end
-
-
 function Base.hash(p::Couple, h::UInt)
 	hv = hash(p.c1)
 	hv ⊻= hash(p.c2)
